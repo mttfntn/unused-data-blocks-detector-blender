@@ -1,0 +1,49 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:      # reused by release.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Blender 5.3
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Blender download
+        uses: actions/cache@v4
+        with:
+          path: ~/blender-download
+          key: blender-5.3.0-linux-x64-tarball
+
+      - name: Get Blender 5.3.0
+        run: bash .github/scripts/get-blender.sh ~/blender-download ~/blender
+
+      - name: System libraries Blender needs (even headless)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libxi6 libxxf86vm1 libxfixes3 libxrender1 \
+            libxkbcommon0 libsm6 libgl1 libegl1 libglu1-mesa > /dev/null
+
+      # Scratch profile dirs so nothing reads or writes a real user profile.
+      - name: Blender tests
+        env:
+          BLENDER_USER_CONFIG: ${{ runner.temp }}/profile/config
+          BLENDER_USER_SCRIPTS: ${{ runner.temp }}/profile/scripts
+          BLENDER_USER_EXTENSIONS: ${{ runner.temp }}/profile/extensions
+        run: ~/blender/blender --background --factory-startup --python tests/test_blender.py
+
+      # Build only to validate. The zip ships as a release asset (release.yml),
+      # not as a workflow artifact, so CI uses no artifact storage.
+      - name: Build and validate package
+        run: |
+          python3 build.py
+          ~/blender/blender --factory-startup --command extension validate dist/*.zip

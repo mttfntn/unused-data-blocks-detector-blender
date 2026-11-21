@@ -1,0 +1,55 @@
+name: Release
+
+# Push an annotated tag vX.Y.Z (matching the manifest version) to test, build
+# and publish a GitHub release. The tag message becomes the release notes.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+jobs:
+  test:
+    uses: ./.github/workflows/tests.yml
+
+  release:
+    needs: test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # actions/checkout only fetches the commit; fetch the annotated tag object
+      # itself so its message can be read.
+      - name: Fetch the tag
+        run: git fetch --force origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+
+      - name: Check tag matches manifest version
+        run: |
+          manifest=$(grep -Po '^version\s*=\s*"\K[^"]+' unused_data_blocks/blender_manifest.toml)
+          if [ "v${manifest}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match manifest version ${manifest}"
+            exit 1
+          fi
+
+      - name: Release notes from the tag message
+        run: |
+          if [ "$(git cat-file -t "${GITHUB_REF_NAME}")" != "tag" ]; then
+            echo "${GITHUB_REF_NAME} is a lightweight tag; use: git tag -a vX.Y.Z -m 'notes'"
+            exit 1
+          fi
+          git tag -l --format='%(contents)' "${GITHUB_REF_NAME}" > notes.md
+          cat notes.md
+
+      - name: Build
+        run: python3 build.py
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/*.zip \
+            --title "Unused Data Blocks Detector ${GITHUB_REF_NAME}" \
+            --notes-file notes.md \
+            --verify-tag
