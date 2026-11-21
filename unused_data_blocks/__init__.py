@@ -485,11 +485,19 @@ class UDB_OT_show_in_outliner(bpy.types.Operator):
 # UI
 # --------------------------------------------------------------------------
 def _is_alert(res, prefs):
-    """True when the flag should turn red (over the % or MB threshold)."""
+    """True when the flag should turn red.
+
+    Red when unused data reaches `alert_mb`, or reaches `alert_percent` of the
+    file's data while also being at least `alert_min_mb`. The minimum keeps a
+    few KB in a near-empty file (e.g. Blender's startup "Dots Stroke"
+    material, ~25% of a new file) from turning the flag red.
+    """
     if prefs is None:
         return res.unused_count > 0
+    mb = 1024 * 1024
     return res.unused_count > 0 and (
-        res.percent >= prefs.alert_percent or res.unused_size >= prefs.alert_mb * 1024 * 1024
+        res.unused_size >= prefs.alert_mb * mb
+        or (res.percent >= prefs.alert_percent and res.unused_size >= prefs.alert_min_mb * mb)
     )
 
 
@@ -655,6 +663,11 @@ class UDB_AP_preferences(bpy.types.AddonPreferences):
         name="Alert at MB", default=10.0, min=0.0,
         description="Turn the flag red when unused data exceeds this size",
     )
+    alert_min_mb: FloatProperty(
+        name="Ignore % Below MB", default=1.0, min=0.0,
+        description="The % alert only applies once unused data reaches this size, "
+                    "so a few KB in a nearly empty file don't turn the flag red",
+    )
     scan_interval: FloatProperty(
         name="Min Scan Interval", default=2.0, min=0.5, max=60.0, subtype='TIME_ABSOLUTE', unit='TIME_ABSOLUTE',
         description="Minimum time between scans after something changed",
@@ -675,6 +688,7 @@ class UDB_AP_preferences(bpy.types.AddonPreferences):
         col = layout.column(heading="Alert")
         col.prop(self, "alert_percent")
         col.prop(self, "alert_mb")
+        col.prop(self, "alert_min_mb")
         col = layout.column()
         col.prop(self, "scan_interval")
         col.prop(self, "list_limit")

@@ -67,6 +67,7 @@ def test_pref_defaults():
     assert p.show_when_clean and not p.compact and p.show_pause_button
     assert p.include_recursive and not p.include_linked
     assert abs(p.alert_percent - 5.0) < 1e-6 and abs(p.alert_mb - 10.0) < 1e-6
+    assert abs(p.alert_min_mb - 1.0) < 1e-6
     assert abs(p.scan_interval - 2.0) < 1e-6 and p.list_limit == 10
 
 
@@ -248,13 +249,19 @@ def test_alert_thresholds():
     m = mod()
     res = m.ScanResult()
     p = prefs()
-    assert not m._is_alert(res, p)
+    MB = 1024 * 1024
+    assert not m._is_alert(res, p)                          # nothing unused
     res.unused_count, res.unused_size, res.total_size = 1, 1024, 10 ** 9
-    assert not m._is_alert(res, p)
-    res.unused_size = int(11 * 1024 * 1024)
-    assert m._is_alert(res, p)
-    res.unused_size, res.total_size = 1024, 2048
-    assert m._is_alert(res, p)
+    assert not m._is_alert(res, p)                          # tiny share, tiny size
+    res.unused_size = 11 * MB
+    assert m._is_alert(res, p)                              # over 10 MB
+    res.unused_size, res.total_size = 2 * MB, 4 * MB
+    assert m._is_alert(res, p)                              # 50% and over the 1 MB minimum
+    res.unused_size, res.total_size = 6272, 24558
+    assert res.percent > 25 and not m._is_alert(res, p)     # "Dots Stroke" in a new file
+    p.alert_min_mb = 0.0
+    assert m._is_alert(res, p)                              # minimum off: % alone counts
+    p.alert_min_mb = 1.0
 
 
 def test_load_resets_state():

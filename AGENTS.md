@@ -29,7 +29,7 @@ Windows Blender: `C:\Program Files\Blender Foundation\Blender 5.3\blender.exe`.
 - `layout.alert` doesn't color popovers. Use an operator button (`wm.call_panel`) for the red state.
 - Drawing must never scan. Handlers must only set flags.
 - Headless: `invoke_confirm` executes directly, and `bpy.ops` calls don't push undo unless you pass `True` after the context, e.g. `('EXEC_DEFAULT', True)`.
-- The GUI factory startup has an unused material "Dots Stroke". Tests remove all orphans in `clean_file()` first.
+- The GUI factory startup has an unused material "Dots Stroke" (~26% of a new file). `_is_alert`: red if `size >= alert_mb`, or `percent >= alert_percent` **and** `size >= alert_min_mb` (1 MB), so new files aren't red (tested). Tests remove all orphans in `clean_file()` first.
 - Manifest `tagline` max 64 chars (validation fails otherwise).
 - The version lives only in `blender_manifest.toml`. `bl_info` was removed on purpose.
 

@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "unused_data_blocks"
-version = "1.1.0"
+version = "1.2.0"
 name = "Unused Data Blocks Detector"
 tagline = "Top bar flag for unused data-blocks and how much they weigh"
 maintainer = "Matteo Fontana"

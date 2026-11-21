@@ -92,7 +92,7 @@ Not applicable: this project is not a fork.
 
 ## Known limits
 - **Sizes are heuristics**, not measured memory: per-attribute bytes for geometry, pixels × channels for loaded images, file size for external or packed files, fixed amounts per keyframe, node and bone, and 1 KB for everything else. Grease pencil, objects, collections and most small types are counted as 1 KB.
-- **New files show a red flag.** Blender's GUI creates the *Dots Stroke* grease pencil material at startup with no users. In an almost empty file its 6 KB is about 26% of all data, above the 5% alert threshold.
+- **New files show one unused item.** Blender's GUI creates the *Dots Stroke* grease pencil material at startup with no users. It's about 26% of a new file's data, so the % alert only applies from *Ignore % Below MB* (1 MB) up; otherwise every new file would be red (that was the case up to 1.1.0).
 - **Changes Blender doesn't announce**, like deleting in the Outliner, are picked up within about 10 s instead of 2 s.
 - Not tested: whether an already-open popover refreshes by itself when a scan finishes while it's open.
 - **Recursive detection relies on `bpy.data.user_map`.** A reference that `user_map` doesn't report would make an item look indirectly unused when it isn't. Blender's own recursive purge works the same way.

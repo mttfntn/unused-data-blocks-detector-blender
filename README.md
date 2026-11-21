@@ -13,7 +13,7 @@ A small flag in Blender's top bar that tells you when your file contains **unuse
 ```
 
 - **Count · size · share**: number of unused data-blocks, their estimated size, and their share of all the file's data.
-- **Red** when unused data passes 5% of the file's data or 10 MB (both adjustable).
+- **Red** when unused data passes 10 MB, or 5% of the file's data once it's at least 1 MB (all adjustable).
 - **✓** when there's nothing unused (can be hidden).
 - **⏸ / ▶** pauses and resumes automatic scanning. While paused, the flag says *Paused* and no scans run.
 
@@ -46,6 +46,7 @@ In **Edit › Preferences › Add-ons › Unused Data Blocks Detector**:
 | Include Indirectly Unused | on | Count data used only by unused data |
 | Include Linked Data | off | Count unused data linked from other .blend files |
 | Alert at % / Alert at MB | 5% / 10 MB | When the flag turns red |
+| Ignore % Below MB | 1 MB | The % rule only counts from this size, so a few KB in a nearly empty file stay neutral |
 | Min Scan Interval | 2 s | Shortest time between scans after a change |
 | Items Listed | 10 | How many items the panel lists |
 
@@ -53,7 +54,7 @@ In **Edit › Preferences › Add-ons › Unused Data Blocks Detector**:
 - **Sizes are estimates**, from vertex/attribute counts, image resolution, packed or on-disk file size and keyframe counts. They are not the size of the saved .blend.
 - **It doesn't add anything to your files.** Settings live in your Blender preferences.
 - **Cost:** a scan takes about 1 ms with 1,000 data-blocks and about 20 ms with 10,000, and only runs after something changes (at most every 2 s), plus a check every 10 s.
-- A new, empty scene already shows one unused item: Blender creates a grease pencil material called *Dots Stroke* at startup that nothing uses.
+- A new, empty scene already shows one unused item (not red): Blender creates a grease pencil material called *Dots Stroke* at startup that nothing uses.
 
 ## For developers
 - [HANDOVER.md](HANDOVER.md): how the project works and how to change, test and release it.
