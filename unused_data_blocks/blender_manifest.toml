@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 id = "unused_data_blocks"
 version = "1.1.0"
 name = "Unused Data Blocks Detector"
-tagline = "Top bar flag showing unused data blocks and how much space they take"
+tagline = "Top bar flag for unused data-blocks and how much they weigh"
 maintainer = "Matteo Fontana"
 type = "add-on"
 
