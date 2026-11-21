@@ -1,7 +1,7 @@
 # Unused Data Blocks Detector for Blender
 
 [![Blender](https://img.shields.io/badge/Blender-5.3-E87D0D?logo=blender&logoColor=white)](https://www.blender.org/download/)
-[![Release](https://img.shields.io/badge/release-v1.1.0-blue)](https://github.com/mttfntn/unused-data-blocks-detector-blender/releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.2.0-blue)](https://github.com/mttfntn/unused-data-blocks-detector-blender/releases/latest)
 [![Tests](https://github.com/mttfntn/unused-data-blocks-detector-blender/actions/workflows/tests.yml/badge.svg)](https://github.com/mttfntn/unused-data-blocks-detector-blender/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](LICENSE)
 [![Python](https://img.shields.io/badge/language-Python-3776AB?logo=python&logoColor=white)](unused_data_blocks)
