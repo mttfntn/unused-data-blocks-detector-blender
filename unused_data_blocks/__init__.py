@@ -7,16 +7,6 @@ data-blocks, with how many there are and an estimate of how much memory /
 file size they account for. Click the flag for a breakdown and cleanup tools.
 """
 
-bl_info = {
-    "name": "Unused Data Blocks Detector",
-    "author": "Matteo Fontana",
-    "version": (1, 1, 0),
-    "blender": (4, 2, 0),
-    "location": "Top Bar (right side)",
-    "description": "Flags unused data-blocks in the top bar and estimates their weight",
-    "category": "Interface",
-}
-
 import os
 import time
 
@@ -111,11 +101,8 @@ def _attributes_size(attributes):
 
 
 def _action_keyframes(action):
-    fcurves = getattr(action, "fcurves", None)  # legacy API (< 5.0)
-    if fcurves is not None:
-        return sum(len(fc.keyframe_points) for fc in fcurves)
     count = 0
-    for layer in getattr(action, "layers", ()):  # layered actions (4.4+)
+    for layer in action.layers:
         for strip in layer.strips:
             for bag in getattr(strip, "channelbags", ()):
                 for fc in bag.fcurves:
@@ -205,10 +192,7 @@ def _prefs():
 
 def _iter_ids():
     for attr, _label, _icon in CATEGORIES:
-        coll = getattr(bpy.data, attr, None)
-        if coll is None:
-            continue
-        for id_data in coll:
+        for id_data in getattr(bpy.data, attr):
             # Render Result / Viewer Node images are runtime buffers, not real data.
             if attr == "images" and id_data.type in {'RENDER_RESULT', 'COMPOSITING'}:
                 continue
@@ -255,11 +239,7 @@ def scan():
     for attr, id_data, size in all_ids:
         if id_data not in unused:
             continue
-        try:
-            uid = id_data.session_uid
-        except AttributeError:
-            uid = 0
-        res.items.append((attr, id_data.name, uid, size, id_data not in direct, id_data.library is not None))
+        res.items.append((attr, id_data.name, id_data.session_uid, size, id_data not in direct, id_data.library is not None))
         cat = res.by_category.setdefault(attr, [0, 0])
         cat[0] += 1
         cat[1] += size
@@ -333,17 +313,9 @@ def _on_load(*_args):
 # --------------------------------------------------------------------------
 # Operators
 # --------------------------------------------------------------------------
-def _find_id(attr, name, uid):
-    coll = getattr(bpy.data, attr, None)
-    if coll is None:
-        return None
-    for id_data in coll:
-        try:
-            if uid and id_data.session_uid == uid:
-                return id_data
-        except AttributeError:
-            pass
-        if not uid and id_data.name == name:
+def _find_id(attr, uid):
+    for id_data in getattr(bpy.data, attr):
+        if id_data.session_uid == uid:
             return id_data
     return None
 
@@ -380,10 +352,10 @@ class UDB_OT_purge(bpy.types.Operator):
         refresh()
         res = _state["result"]
         ids = []
-        for attr, name, uid, _size, _rec, _linked in res.items:
+        for attr, _name, uid, _size, _rec, _linked in res.items:
             if self.category and attr != self.category:
                 continue
-            id_data = _find_id(attr, name, uid)
+            id_data = _find_id(attr, uid)
             if id_data is not None:
                 ids.append(id_data)
         if ids:
@@ -400,11 +372,10 @@ class UDB_OT_remove_one(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     attr: StringProperty()
-    name: StringProperty()
     uid: IntProperty()
 
     def execute(self, context):
-        id_data = _find_id(self.attr, self.name, self.uid)
+        id_data = _find_id(self.attr, self.uid)
         if id_data is None:
             self.report({'WARNING'}, "Data-block not found")
         else:
@@ -420,11 +391,10 @@ class UDB_OT_keep(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     attr: StringProperty()
-    name: StringProperty()
     uid: IntProperty()
 
     def execute(self, context):
-        id_data = _find_id(self.attr, self.name, self.uid)
+        id_data = _find_id(self.attr, self.uid)
         if id_data is not None:
             id_data.use_fake_user = True
         refresh(force=True)
@@ -514,9 +484,9 @@ class UDB_PT_unused_data(bpy.types.Panel):
             r.label(text=text, icon=icon)
             r.label(text=format_size(size))
             op = r.operator("udb.keep", text="", icon='FAKE_USER_OFF', emboss=False)
-            op.attr, op.name, op.uid = attr, name, uid
+            op.attr, op.uid = attr, uid
             op = r.operator("udb.remove_one", text="", icon='X', emboss=False)
-            op.attr, op.name, op.uid = attr, name, uid
+            op.attr, op.uid = attr, uid
         if res.unused_count > limit:
             box.label(text=f"… and {res.unused_count - limit} more")
 

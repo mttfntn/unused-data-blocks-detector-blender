@@ -7,7 +7,9 @@ tagline = "Top bar flag showing unused data blocks and how much space they take"
 maintainer = "Matteo Fontana"
 type = "add-on"
 
-blender_version_min = "4.2.0"
+blender_version_min = "5.3.0"
+# Exclusive upper bound: only Blender 5.3.x is supported.
+blender_version_max = "5.4.0"
 
 license = ["SPDX:GPL-3.0-or-later"]
 tags = ["User Interface", "System"]

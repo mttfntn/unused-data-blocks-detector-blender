@@ -183,10 +183,10 @@ def test_remove_one_and_keep():
     scan_names()
     items = {it[1]: it for it in mod()._state["result"].items}
     a, n, uid = items["R_Mesh"][:3]
-    assert bpy.ops.udb.remove_one(attr=a, name=n, uid=uid) == {'FINISHED'}
+    assert bpy.ops.udb.remove_one(attr=a, uid=uid) == {'FINISHED'}
     assert "R_Mesh" not in bpy.data.meshes
     a, n, uid = items["R_Mat"][:3]
-    assert bpy.ops.udb.keep(attr=a, name=n, uid=uid) == {'FINISHED'}
+    assert bpy.ops.udb.keep(attr=a, uid=uid) == {'FINISHED'}
     assert bpy.data.materials["R_Mat"].use_fake_user
     assert mod()._state["result"].unused_count == 0
 
