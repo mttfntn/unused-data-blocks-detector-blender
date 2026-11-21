@@ -1,10 +1,22 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """
-Unused Data Blocks Detector
+Unused Data Blocks Detector (Blender 5.3 extension, single module).
 
-Shows a small flag in the top bar when the file contains unused (orphan)
-data-blocks, with how many there are and an estimate of how much memory /
-file size they account for. Click the flag for a breakdown and cleanup tools.
+Shows a small flag in the top bar when the file contains unused data-blocks,
+with how many there are and an estimate of how much they weigh. Clicking it
+opens a panel with a breakdown and cleanup tools.
+
+How the pieces fit together:
+- Change detection: depsgraph/undo/redo/load handlers only set a "dirty" flag.
+- `_timer` (every 0.5 s) calls `refresh()` when dirty, at most once per
+  `scan_interval`, plus a periodic safety rescan; nothing runs while paused.
+- `scan()` walks the CATEGORIES collections, estimates every data-block's size
+  (`estimate_size`), collects IDs with zero users, optionally adds IDs used
+  only by those (recursive), and returns a `ScanResult`.
+- `refresh()` stores the result in `_state` and, when it changed, makes the
+  top bar redraw (`_redraw_ui`).
+- Drawing (`draw_topbar`, `UDB_PT_unused_data`) only reads `_state`; it never
+  scans. Operators delete or keep data-blocks, looked up by session_uid.
 """
 
 import os
@@ -71,7 +83,11 @@ _file_size_cache = {}
 
 
 def _disk_size(id_data):
-    """Packed size, otherwise size of the external file on disk."""
+    """Size in bytes of the packed file, else of the external file on disk.
+
+    Returns 0 for missing files. Disk sizes are cached per absolute path until
+    the next file load (see `_on_load`).
+    """
     packed = getattr(id_data, "packed_file", None)
     if packed is not None:
         return packed.size
@@ -91,6 +107,7 @@ def _disk_size(id_data):
 
 
 def _attributes_size(attributes):
+    """Bytes used by a geometry attribute collection (elements x type size)."""
     total = 0
     for attr in attributes:
         try:
@@ -101,6 +118,7 @@ def _attributes_size(attributes):
 
 
 def _action_keyframes(action):
+    """Number of keyframes in a layered action (all layers, strips, slots)."""
     count = 0
     for layer in action.layers:
         for strip in layer.strips:
@@ -111,11 +129,20 @@ def _action_keyframes(action):
 
 
 def _tree_size(tree):
+    """Rough weight of a node tree: 1 KB per node, 64 B per link."""
     return len(tree.nodes) * 1024 + len(tree.links) * 64 if tree else 0
 
 
 def estimate_size(attr, id_data):
-    """Approximate in-memory weight of a data-block, in bytes."""
+    """Estimated weight of one data-block in bytes (a heuristic, not exact).
+
+    Meshes, hair curves, point clouds: attribute data (plus face/curve
+    offsets). Legacy curves: per point. Images: packed file size, else pixels
+    in memory, else generated size, else file size on disk. Sounds, fonts,
+    clips, volumes, cache files: file size. Actions: per keyframe. Node-based
+    IDs: per node and link. Armatures, lattices: per bone/point. Everything
+    except images also gets BASE_ID_SIZE; unknown types or errors get only that.
+    """
     try:
         if attr == "meshes":
             # Attributes include positions, edges and corner topology.
@@ -154,17 +181,19 @@ def estimate_size(attr, id_data):
 
 
 def format_size(num):
+    """Human-readable size: B, KB, MB or GB (1024-based)."""
     for unit in ("B", "KB", "MB", "GB"):
         if num < 1024 or unit == "GB":
             return f"{num:.0f} {unit}" if unit == "B" else f"{num:.1f} {unit}"
         num /= 1024.0
-    return f"{num:.1f} GB"
 
 
 # --------------------------------------------------------------------------
 # Scanning
 # --------------------------------------------------------------------------
 class ScanResult:
+    """Outcome of one scan; read by the UI, replaced by each refresh."""
+
     def __init__(self):
         self.items = []          # (attr, name, session_uid, size, recursive, linked)
         self.by_category = {}    # attr -> [count, size]
@@ -186,11 +215,13 @@ _state = {
 
 
 def _prefs():
+    """The add-on preferences, or None if the add-on is not enabled."""
     addon = bpy.context.preferences.addons.get(__package__)
     return addon.preferences if addon else None
 
 
 def _iter_ids():
+    """Yield (bpy.data attribute, ID) for every data-block that is scanned."""
     for attr, _label, _icon in CATEGORIES:
         for id_data in getattr(bpy.data, attr):
             # Render Result / Viewer Node images are runtime buffers, not real data.
@@ -200,6 +231,13 @@ def _iter_ids():
 
 
 def scan():
+    """Find unused data-blocks and estimate their weight. Returns a ScanResult.
+
+    Directly unused: zero users (a fake user counts as a user). With
+    `include_recursive`, IDs whose only users are unused IDs are added too,
+    repeating until stable, like a recursive purge. Linked IDs are skipped
+    unless `include_linked`. `total_size` covers every scanned ID.
+    """
     t0 = time.perf_counter()
     prefs = _prefs()
     recursive = prefs.include_recursive if prefs else True
@@ -251,6 +289,7 @@ def scan():
 
 
 def _redraw_ui():
+    """Make the top bar and any Preferences editor redraw with new results."""
     wm = bpy.context.window_manager
     if wm is None:
         return
@@ -271,6 +310,7 @@ def _redraw_ui():
 
 
 def refresh(force=False):
+    """Rescan now and store the result; redraw if it changed (or `force`)."""
     old = _state["result"]
     try:
         new = scan()
@@ -287,6 +327,7 @@ def refresh(force=False):
 
 
 def _timer():
+    """Persistent app timer: rescans when needed. Returns the next delay."""
     prefs = _prefs()
     if prefs is not None and prefs.paused:
         return 1.0
@@ -302,11 +343,13 @@ def _timer():
 
 @persistent
 def _on_change(*_args):
+    """Depsgraph/undo/redo handler: just mark the cached result as stale."""
     _state["dirty"] = True
 
 
 @persistent
 def _on_load(*_args):
+    """load_post handler: forget cached disk sizes and rescan soon."""
     _file_size_cache.clear()
     _state["dirty"] = True
     _state["last_scan"] = 0.0
@@ -316,12 +359,16 @@ def _on_load(*_args):
 # Operators
 # --------------------------------------------------------------------------
 def _find_id(attr, uid):
+    """The data-block in bpy.data.<attr> with this session_uid, or None."""
     for id_data in getattr(bpy.data, attr):
         if id_data.session_uid == uid:
             return id_data
     return None
 
 
+# No docstrings on Blender classes below: Blender would show them as tooltips.
+
+# Rescan immediately (works while paused too).
 class UDB_OT_refresh(bpy.types.Operator):
     bl_idname = "udb.refresh"
     bl_label = "Rescan Unused Data"
@@ -344,6 +391,7 @@ def purge_summary(category=""):
     return len(items), sum(it[3] for it in items)
 
 
+# Delete every listed unused data-block, or only one type (`category`).
 class UDB_OT_purge(bpy.types.Operator):
     bl_idname = "udb.purge"
     bl_label = "Purge Unused Data"
@@ -379,6 +427,7 @@ class UDB_OT_purge(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# Delete a single data-block, identified by type and session_uid.
 class UDB_OT_remove_one(bpy.types.Operator):
     bl_idname = "udb.remove_one"
     bl_label = "Delete Data-Block"
@@ -398,6 +447,7 @@ class UDB_OT_remove_one(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# Set a fake user on a data-block so it is kept and no longer flagged.
 class UDB_OT_keep(bpy.types.Operator):
     bl_idname = "udb.keep"
     bl_label = "Keep (Fake User)"
@@ -415,6 +465,7 @@ class UDB_OT_keep(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# Switch the first Outliner in this screen to Blender's Unused Data view.
 class UDB_OT_show_in_outliner(bpy.types.Operator):
     bl_idname = "udb.show_in_outliner"
     bl_label = "Show in Outliner"
@@ -434,6 +485,7 @@ class UDB_OT_show_in_outliner(bpy.types.Operator):
 # UI
 # --------------------------------------------------------------------------
 def _is_alert(res, prefs):
+    """True when the flag should turn red (over the % or MB threshold)."""
     if prefs is None:
         return res.unused_count > 0
     return res.unused_count > 0 and (
@@ -441,6 +493,7 @@ def _is_alert(res, prefs):
     )
 
 
+# Popover opened from the top bar flag: summary, per-type and per-item tools.
 class UDB_PT_unused_data(bpy.types.Panel):
     bl_idname = "UDB_PT_unused_data"
     bl_label = "Unused Data"
@@ -513,6 +566,7 @@ class UDB_PT_unused_data(bpy.types.Panel):
 
 
 def draw_topbar(self, context):
+    """Top bar header hook: draws the flag and pause button (right side only)."""
     if context.region.alignment != 'RIGHT':
         return
     prefs = _prefs()
@@ -552,17 +606,20 @@ def draw_topbar(self, context):
 # Preferences
 # --------------------------------------------------------------------------
 def _prefs_update(self, context):
+    """Detection setting changed: rescan on the next timer tick."""
     _state["dirty"] = True
     _state["last_scan"] = 0.0
 
 
 def _paused_update(self, context):
+    """Pause toggled: resuming rescans at once; pausing redraws the flag."""
     if not self.paused:
         refresh(force=True)  # resume immediately with fresh numbers
     else:
         _redraw_ui()
 
 
+# Add-on preferences. `paused` is stored here so it survives restarts.
 class UDB_AP_preferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
@@ -647,6 +704,7 @@ HANDLERS = (
 
 
 def register():
+    """Register classes, the top bar hook, handlers and the scan timer."""
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.WindowManager.udb_percent = FloatProperty(
@@ -664,6 +722,7 @@ def register():
 
 
 def unregister():
+    """Undo everything `register` did, in reverse order."""
     if bpy.app.timers.is_registered(_timer):
         bpy.app.timers.unregister(_timer)
     for handler_list, fn in HANDLERS:
