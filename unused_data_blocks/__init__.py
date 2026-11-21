@@ -263,9 +263,11 @@ def _redraw_ui():
             ws.use_pin_scene = ws.use_pin_scene
         except Exception:
             pass
+    # Outside the top bar, only the add-on preferences show scan results.
     for window in wm.windows:
         for area in window.screen.areas:
-            area.tag_redraw()
+            if area.type == 'PREFERENCES':
+                area.tag_redraw()
 
 
 def refresh(force=False):
@@ -330,6 +332,18 @@ class UDB_OT_refresh(bpy.types.Operator):
         return {'FINISHED'}
 
 
+def purge_summary(category=""):
+    """Rescan, then return (count, estimated bytes) that a purge would delete.
+
+    Used by the purge confirmation dialog. Rescanning first makes the dialog
+    match what UDB_OT_purge.execute() deletes: the cached result can be stale
+    while scanning is paused or between two timer scans.
+    """
+    refresh()
+    items = [it for it in _state["result"].items if not category or it[0] == category]
+    return len(items), sum(it[3] for it in items)
+
+
 class UDB_OT_purge(bpy.types.Operator):
     bl_idname = "udb.purge"
     bl_label = "Purge Unused Data"
@@ -339,25 +353,25 @@ class UDB_OT_purge(bpy.types.Operator):
     category: StringProperty(default="", options={'SKIP_SAVE'})
 
     def invoke(self, context, event):
-        res = _state["result"]
-        items = [it for it in res.items if not self.category or it[0] == self.category]
-        size = sum(it[3] for it in items)
+        count, size = purge_summary(self.category)
         return context.window_manager.invoke_confirm(
             self, event, title="Purge Unused Data",
-            message=f"Delete {len(items)} data-blocks (~{format_size(size)})?",
+            message=f"Delete {count} data-blocks (~{format_size(size)})?",
             confirm_text="Delete", icon='WARNING',
         )
 
     def execute(self, context):
         refresh()
-        res = _state["result"]
-        ids = []
-        for attr, _name, uid, _size, _rec, _linked in res.items:
-            if self.category and attr != self.category:
-                continue
-            id_data = _find_id(attr, uid)
-            if id_data is not None:
-                ids.append(id_data)
+        wanted = {}  # attr -> set of session_uids to delete
+        for attr, _name, uid, _size, _rec, _linked in _state["result"].items:
+            if not self.category or attr == self.category:
+                wanted.setdefault(attr, set()).add(uid)
+        ids = [
+            id_data
+            for attr, uids in wanted.items()
+            for id_data in getattr(bpy.data, attr)
+            if id_data.session_uid in uids
+        ]
         if ids:
             bpy.data.batch_remove(ids=ids)
         self.report({'INFO'}, f"Removed {len(ids)} unused data-blocks")

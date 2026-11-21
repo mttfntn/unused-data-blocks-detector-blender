@@ -176,6 +176,34 @@ def test_purge_all_and_category():
     assert mod()._state["result"].unused_count == 0
 
 
+def test_purge_dialog_matches_deletion():
+    # Regression: the confirm dialog used the cached scan, which is stale
+    # while paused, so it could announce fewer items than were deleted.
+    clean_file()
+    scan_names()
+    prefs().paused = True
+    for i in range(3):
+        bpy.data.images.new(f"PD{i}", 8, 8)
+    count, size = mod().purge_summary()
+    assert (count, size) == (3, 3 * 8 * 8 * 4), (count, size)
+    assert mod().purge_summary("meshes") == (0, 0)
+    bpy.ops.udb.purge('EXEC_DEFAULT')
+    assert not any(f"PD{i}" in bpy.data.images for i in range(3))
+    prefs().paused = False
+
+
+def test_purge_many():
+    # Purge looks items up through one session_uid map per collection.
+    clean_file()
+    for i in range(2000):
+        bpy.data.meshes.new(f"F{i}")
+        bpy.data.materials.new(f"FM{i}")
+    bpy.ops.udb.purge('EXEC_DEFAULT')
+    assert mod()._state["result"].unused_count == 0
+    assert not any(m.name.startswith("F") for m in bpy.data.meshes)
+    assert not any(m.name.startswith("FM") for m in bpy.data.materials)
+
+
 def test_remove_one_and_keep():
     clean_file()
     bpy.data.meshes.new("R_Mesh")
