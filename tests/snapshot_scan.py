@@ -124,6 +124,18 @@ def snapshot():
                 "total_size": res.total_size,
                 "percent": round(res.percent, 9),
             }
+    # Same scan with the module registered directly (no add-on preferences),
+    # which takes the `prefs is None` defaults path.
+    addon_utils.disable(MODULE, default_set=True)
+    mod.register()
+    assert mod._prefs() is None
+    res = mod.scan()
+    out["scans"]["no_prefs"] = {
+        "items": sorted([it[0], it[1], it[3], it[4], it[5]] for it in res.items),
+        "unused_count": res.unused_count, "unused_size": res.unused_size,
+        "total_size": res.total_size, "alert": mod._is_alert(res, None),
+    }
+    mod.unregister()
     return out
 
 
