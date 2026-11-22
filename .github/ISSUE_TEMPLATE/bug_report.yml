@@ -1,0 +1,68 @@
+name: Bug report
+description: Something does not work as described in the README
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the [README](https://github.com/mttfntn/unused-data-blocks-detector-blender#readme) first, and whether an issue for the same problem already exists.
+
+  - type: input
+    id: blender
+    attributes:
+      label: Blender version
+      description: Help › About Blender. Unused Data Blocks Detector supports Blender 5.3 only.
+      placeholder: "5.3.0"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Unused Data Blocks Detector version
+      description: Shown in Edit › Preferences › Get Extensions › Unused Data Blocks Detector
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you clicked or ran, in order, starting from a new file if possible.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or a .blend file
+      description: Drag images here, or a small .blend (zip it to attach it).
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Error messages
+      description: Messages in the system console (Window › Toggle System Console on Windows), or any Blender error.
+      render: shell
