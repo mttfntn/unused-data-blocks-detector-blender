@@ -1,10 +1,10 @@
 # Unused Data Blocks Detector for Blender
 
-[![Blender](https://img.shields.io/badge/Blender-5.3-E87D0D?logo=blender&logoColor=white)](https://www.blender.org/download/)
-[![Release](https://img.shields.io/badge/release-v1.2.0-blue)](https://github.com/mttfntn/unused-data-blocks-detector-blender/releases/latest)
+[![Blender](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmttfntn%2Funused-data-blocks-detector-blender%2Fmain%2Funused_data_blocks%2Fblender_manifest.toml&query=%24.blender_version_min&label=Blender&color=E87D0D&logo=blender&logoColor=white)](https://www.blender.org/download/)
+[![Release](https://img.shields.io/github/v/release/mttfntn/unused-data-blocks-detector-blender)](https://github.com/mttfntn/unused-data-blocks-detector-blender/releases/latest)
 [![Tests](https://github.com/mttfntn/unused-data-blocks-detector-blender/actions/workflows/tests.yml/badge.svg)](https://github.com/mttfntn/unused-data-blocks-detector-blender/actions/workflows/tests.yml)
-[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](LICENSE)
-[![Python](https://img.shields.io/badge/language-Python-3776AB?logo=python&logoColor=white)](unused_data_blocks)
+[![License](https://img.shields.io/github/license/mttfntn/unused-data-blocks-detector-blender)](LICENSE)
+[![Language](https://img.shields.io/github/languages/top/mttfntn/unused-data-blocks-detector-blender)](https://github.com/mttfntn/unused-data-blocks-detector-blender)
 
 A small flag in Blender's top bar that tells you when your file contains **unused data-blocks** (meshes, images, materials and so on that nothing uses), how many there are and roughly how much they weigh.
 

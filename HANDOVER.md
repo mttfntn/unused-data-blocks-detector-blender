@@ -6,7 +6,7 @@ A Blender add-on (extension format) that puts a flag in the top bar showing how 
 - Language: Python, one module.
 - Supported: **Blender 5.3 only** (manifest `blender_version_min = 5.3.0`, `blender_version_max = 5.4.0`). Code written for older Blender versions was removed on purpose.
 - License: GPL-3.0-or-later. Not a fork.
-- Repository: `github.com/mttfntn/unused-data-blocks-detector-blender` (private), branch `main`.
+- Repository: `github.com/mttfntn/unused-data-blocks-detector-blender` (public), branch `main`.
 
 ## What you need
 - Blender 5.3. On this machine: `C:\Program Files\Blender Foundation\Blender 5.3\blender.exe`.
@@ -69,7 +69,7 @@ Then start Blender with the same `BLENDER_USER_*` variables and install the zip 
 
 ## How to make a release
 1. Bump `version` in `unused_data_blocks/blender_manifest.toml`.
-2. **The repo is private, so the README badges are static.** Update the release badge in `README.md` (`release-vX.Y.Z`) by hand. The Tests badge is GitHub's own and updates itself.
+2. Nothing to change in `README.md`: its release, license and language badges read GitHub, and the Blender badge reads the manifest.
 3. Run the tests locally. Commit and push to `main`. Wait for the Tests workflow to pass (`gh run list`).
 4. Create an **annotated** tag whose message is the release notes, and push it:
    ```bash

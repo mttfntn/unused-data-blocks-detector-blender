@@ -1,6 +1,6 @@
 # AGENTS.md: Unused Data Blocks Detector (Blender add-on)
 
-Top bar flag showing unused data-blocks and their estimated weight, plus a popover to keep/delete them. Blender **5.3 only**. Extension format, one module. Python. GPL-3.0-or-later. Not a fork. Private repo `github.com/mttfntn/unused-data-blocks-detector-blender`, branch `main`. Human docs: `HANDOVER.md`.
+Top bar flag showing unused data-blocks and their estimated weight, plus a popover to keep/delete them. Blender **5.3 only**. Extension format, one module. Python. GPL-3.0-or-later. Not a fork. Public repo `github.com/mttfntn/unused-data-blocks-detector-blender`, branch `main`. Human docs: `HANDOVER.md`.
 
 ## Commands
 ```
@@ -41,7 +41,7 @@ Windows Blender: `C:\Program Files\Blender Foundation\Blender 5.3\blender.exe`.
 - Isolated GUI Blender 5.3 (scratch profile): the zip installs and enables; flag clean/red/paused/resumed checked by screenshot; purge then undo restores, redo deletes again.
 
 ## Release checklist
-1. Bump `version` in `unused_data_blocks/blender_manifest.toml` **and** the static release badge in `README.md` (private repo, so badges are static, except GitHub's Tests badge).
+1. Bump `version` in `unused_data_blocks/blender_manifest.toml` (the README badges read it and the release themselves).
 2. Run the tests locally. Commit and push to `main`. Confirm Tests is green (`gh run list`).
 3. `git tag -a vX.Y.Z -m "<notes>"`, then `git push origin vX.Y.Z`.
 4. Watch Release (`gh run watch`). Check `gh release view vX.Y.Z` has the zip.
